@@ -17,6 +17,8 @@
 package com.google.android.gms.location.sample.locationupdates;
 
 import android.location.Location;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -33,8 +35,27 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.util.Date;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 
 /**
  * Getting Location Updates.
@@ -362,6 +383,8 @@ public class MainActivity extends ActionBarActivity implements
         updateUI();
         Toast.makeText(this, getResources().getString(R.string.location_updated_message),
                 Toast.LENGTH_SHORT).show();
+        ReportLocationTask reportLocationTask = new ReportLocationTask();
+        reportLocationTask.execute();
     }
 
     @Override
@@ -389,4 +412,80 @@ public class MainActivity extends ActionBarActivity implements
         savedInstanceState.putString(LAST_UPDATED_TIME_STRING_KEY, mLastUpdateTime);
         super.onSaveInstanceState(savedInstanceState);
     }
+
+    public class ReportLocationTask extends AsyncTask<Void,Void,Void>{
+
+        private final String LOG_TAG = ReportLocationTask.class.getSimpleName();
+
+        @Override
+        protected Void doInBackground(Void... params) {
+
+            final String ADD_EVENT = "https://geoloctrack.herokuapp.com/addEvent";
+//            final String GET_EVENTS = "https://geoloctrack.herokuapp.com/getGeoAll";
+
+            HttpURLConnection urlConnection = null;
+            Uri builtUri = Uri.parse(ADD_EVENT).buildUpon()
+                    .build();
+
+            Log.v(LOG_TAG, builtUri.toString());
+            try {
+                URL url = new URL(ADD_EVENT);
+                urlConnection = (HttpURLConnection)url.openConnection();
+
+                urlConnection.setRequestMethod("POST");
+                urlConnection.setRequestProperty("Content-Type", "application/json");
+                urlConnection.setRequestProperty("Accept", "application/json");
+                urlConnection.connect();
+
+                Log.v(LOG_TAG, "URL->" + urlConnection.toString());
+                JSONObject jsonParam = new JSONObject();
+                jsonParam.put("id", 4);
+                jsonParam.put("latitude", mCurrentLocation.getLatitude());
+                jsonParam.put("longitude", mCurrentLocation.getLongitude());
+
+                Log.v(LOG_TAG, jsonParam.toString());
+
+                DataOutputStream printout = new DataOutputStream(urlConnection.getOutputStream());
+                printout.writeBytes(jsonParam.toString());
+                printout.flush();
+                printout.close();
+
+
+
+                int status = urlConnection.getResponseCode();
+                Log.v(LOG_TAG, "status -" + status);
+                Log.v(LOG_TAG, "response-" + urlConnection.getResponseMessage());
+                InputStream error = urlConnection.getErrorStream();
+
+                Log.v(LOG_TAG, "error-" + error);
+
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if(inputStream == null){
+                    return null ;
+                }
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+                String line;
+                while( (line=reader.readLine()) != null){
+                    buffer.append(line + "\n");
+                }
+                Log.v(LOG_TAG, "Output-" + buffer.toString());
+
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (ProtocolException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            return null;
+        }
+    }
+
 }
