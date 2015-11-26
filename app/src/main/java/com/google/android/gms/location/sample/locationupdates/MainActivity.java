@@ -16,12 +16,17 @@
 
 package com.google.android.gms.location.sample.locationupdates;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -157,6 +162,28 @@ public class MainActivity extends ActionBarActivity implements
         // Kick off the process of building a GoogleApiClient and requesting the LocationServices
         // API.
         buildGoogleApiClient();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     /**
@@ -439,7 +466,9 @@ public class MainActivity extends ActionBarActivity implements
 
                 Log.v(LOG_TAG, "URL->" + urlConnection.toString());
                 JSONObject jsonParam = new JSONObject();
-                jsonParam.put("id", 4);
+                SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                String deviceId = preferences.getString(getString(R.string.pref_device_key),getString(R.string.pref_device_default));
+                jsonParam.put("id", Integer.parseInt(deviceId));
                 jsonParam.put("latitude", mCurrentLocation.getLatitude());
                 jsonParam.put("longitude", mCurrentLocation.getLongitude());
 
